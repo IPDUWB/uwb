@@ -1,0 +1,7 @@
+device STM32F412ZG
+loadbin ../bin/uwb.bin, 0x08000000
+verifybin ../bin/uwb.bin, 0x08000000
+r
+g
+qc
+h
