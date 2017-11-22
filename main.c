@@ -64,7 +64,6 @@ int main(void)
     port_init(&spiHandle);
     dw_reset();
 
-    printf("test\n");
     if(dwt_initialise(DWT_LOADNONE) == DWT_ERROR) {
         while(1);
     }
@@ -75,6 +74,8 @@ int main(void)
     dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
     dwt_configure(&config);
 
+    uint32_t time = 0;
+    uint32_t totalFrame = 0;
     while (true) {
 
         // Clear buffer
@@ -91,22 +92,28 @@ int main(void)
         while(!((status_reg = dwt_read32bitreg(SYS_STATUS_ID))
                 & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR)));
 
+        if(time == 0) {
+            time = sys_timer_get_ms();
+        }
+
         if (status_reg & SYS_STATUS_RXFCG) {
             // A frame has been received, copy it to our local buffer.
             frame_len = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFL_MASK_1023;
-            if (frame_len <= FRAME_RECEIVE_LEN_MAX)
-            {
+            if (frame_len <= FRAME_RECEIVE_LEN_MAX) {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
+                totalFrame += frame_len;
+                if(totalFrame == 10 * FRAME_RECEIVE_LEN_MAX) {
+                    printf("Time: %u\n", (unsigned)sys_timer_get_elapsed_ms(time));
+                }
+                printf("Received %d bytes\n", frame_len);
             }
 
             // Clear good RX frame event in the DW1000 status register.
             dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG);
-            HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-            sys_timer_delay_ms(500);
-        }
-        else {
+        } else {
             // Clear RX error events in the DW1000 status register.
             dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR);
+            time = 0;
         }
     }
 
