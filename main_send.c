@@ -18,7 +18,7 @@
 // Macro's
 //------------------------------------------------------------------------------
 
-#define FRAME_RECEIVE_LEN_MAX 127
+#define FRAME_RECEIVE_LEN_MAX   127
 
 //------------------------------------------------------------------------------
 // Global variables
@@ -67,6 +67,8 @@ int main(void)
     if(dwt_initialise(DWT_LOADNONE) == DWT_ERROR) {
         while(1);
     }
+
+    // Set SPI frequency to 20Mhz
 
     dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
     dwt_configure(&config);

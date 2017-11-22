@@ -69,6 +69,9 @@ int main(void)
         while(1);
     }
 
+    // Set SPI frequency to 20Mhz
+    SPI1->CR1 |= SPI_BAUDRATEPRESCALER_4;
+
     dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
     dwt_configure(&config);
 
