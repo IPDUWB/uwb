@@ -19,23 +19,23 @@
 // Macro's
 //------------------------------------------------------------------------------
 
-#define FRAME_RECEIVE_LEN_MAX    127
+#define FRAME_RECEIVE_LEN_MAX    1023
 
 //------------------------------------------------------------------------------
 // Global variables
 //------------------------------------------------------------------------------
 
 static dwt_config_t config = {
-        .chan = 5,                      // Channel number.
+        .chan = 7,                      // Channel number.
         .prf = DWT_PRF_64M,             // Pulse repetition frequency.
-        .txPreambLength = DWT_PLEN_1024,  // Preamble length. Used in TX only.
-        .rxPAC = DWT_PAC32,             // Preamble acquisition chunk size. Used in RX only.
-        .txCode = 10,                   // TX preamble code. Used in TX only.
-        .rxCode = 10,                   // RX preamble code. Used in RX only.
-        .nsSFD = false,                 // 0 to use standard SFD, 1 to use non-standard SFD.
+        .txPreambLength = DWT_PLEN_64,  // Preamble length. Used in TX only.
+        .rxPAC = DWT_PAC8,             // Preamble acquisition chunk size. Used in RX only.
+        .txCode = 17,                   // TX preamble code. Used in TX only.
+        .rxCode = 17,                   // RX preamble code. Used in RX only.
+        .nsSFD = true,                 // 0 to use standard SFD, 1 to use non-standard SFD.
         .dataRate = DWT_BR_6M8,         // Data rate.
-        .phrMode = DWT_PHRMODE_STD,     // PHY header mode.
-        .sfdTO = (1025 + 64 - 32)           // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
+        .phrMode = DWT_PHRMODE_EXT,     // PHY header mode.
+        .sfdTO = (65 + 8 - 8)           // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
 };
 
 static uint8_t rx_buffer[FRAME_RECEIVE_LEN_MAX] = {0};
@@ -68,10 +68,11 @@ int main(void)
         while(1);
     }
 
+    dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
+
     // Set SPI frequency to 20Mhz
     SPI1->CR1 |= SPI_BAUDRATEPRESCALER_4;
 
-    dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
     dwt_configure(&config);
 
     uint32_t time = 0;
@@ -83,7 +84,6 @@ int main(void)
 
         // Activate reception immediately. See NOTE 4 below.
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
 
         // Poll until a frame is properly received or an error/timeout occurs
         uint32_t status_reg = 0;
@@ -102,8 +102,10 @@ int main(void)
             if (frame_len <= FRAME_RECEIVE_LEN_MAX) {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
                 totalFrame += frame_len;
-                if(totalFrame == 10 * FRAME_RECEIVE_LEN_MAX) {
+                if(totalFrame == (1000 * 1000)) {
                     printf("Time: %u\n", (unsigned)sys_timer_get_elapsed_ms(time));
+                    time = 0;
+                    totalFrame = 0;
                 }
                 printf("Received %d bytes\n", frame_len);
             }
@@ -111,9 +113,11 @@ int main(void)
             // Clear good RX frame event in the DW1000 status register.
             dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG);
         } else {
+            printf("Error\n");
             // Clear RX error events in the DW1000 status register.
             dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR);
             time = 0;
+            totalFrame = 0;
         }
     }
 

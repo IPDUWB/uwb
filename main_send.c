@@ -10,35 +10,30 @@
 #include "deca/deca_device_api.h"
 #include "deca/deca_regs.h"
 // Project
+#include "resources.h"
 #include "platform/stm32_port.h"
 #include "platform/stm32_init.h"
-#include "sys_timer.h"
 
 //------------------------------------------------------------------------------
 // Macro's
 //------------------------------------------------------------------------------
-
-#define FRAME_RECEIVE_LEN_MAX   127
 
 //------------------------------------------------------------------------------
 // Global variables
 //------------------------------------------------------------------------------
 
 static dwt_config_t config = {
-        .chan = 5,                      // Channel number.
+        .chan = 7,                      // Channel number.
         .prf = DWT_PRF_64M,             // Pulse repetition frequency.
-        .txPreambLength = DWT_PLEN_1024,  // Preamble length. Used in TX only.
-        .rxPAC = DWT_PAC32,             // Preamble acquisition chunk size. Used in RX only.
-        .txCode = 10,                   // TX preamble code. Used in TX only.
-        .rxCode = 10,                   // RX preamble code. Used in RX only.
-        .nsSFD = false,                 // 0 to use standard SFD, 1 to use non-standard SFD.
+        .txPreambLength = DWT_PLEN_64,  // Preamble length. Used in TX only.
+        .rxPAC = DWT_PAC8,             // Preamble acquisition chunk size. Used in RX only.
+        .txCode = 17,                   // TX preamble code. Used in TX only.
+        .rxCode = 17,                   // RX preamble code. Used in RX only.
+        .nsSFD = true,                 // 0 to use standard SFD, 1 to use non-standard SFD.
         .dataRate = DWT_BR_6M8,         // Data rate.
-        .phrMode = DWT_PHRMODE_STD,     // PHY header mode.
-        .sfdTO = (1025 + 64 - 32)           // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
+        .phrMode = DWT_PHRMODE_EXT,     // PHY header mode.
+        .sfdTO = (65 + 16 - 8)           // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
 };
-
-// Dummy string with fake crc to send
-static uint8 tx_msg[] = {'D', 'E', 'C', 'A', 'W', 'A', 'V', 'E', 0, 0};
 
 //------------------------------------------------------------------------------
 // Functions
@@ -68,10 +63,10 @@ int main(void)
         while(1);
     }
 
+    dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
+
     // Set SPI frequency to 20Mhz
     SPI1->CR1 |= SPI_BAUDRATEPRESCALER_4;
-
-    dwt_loadopsettabfromotp(DWT_OPSET_64LEN);
     dwt_configure(&config);
 
     while(true) {
